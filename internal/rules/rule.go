@@ -10,6 +10,7 @@ import (
 
 type ID = ruleid.ID
 
+// Canonical rule identifiers.
 const (
 	RuleLowercase ID = ruleid.Lowercase
 	RuleEnglish   ID = ruleid.English
@@ -17,16 +18,17 @@ const (
 	RuleSensitive ID = ruleid.Sensitive
 )
 
+// Violation describes a single rule failure for a log call.
 type Violation struct {
 	Rule    ID
 	Message string
 	Expr    ast.Expr
 }
 
+// CheckFunc validates one log record and returns found violations.
 type CheckFunc func(logcall.Record) []Violation
 
-// RuleSet contains all rule checkers.
-// It supports configuration for rules that need it (e.g., sensitive).
+// RuleSet holds configured rule checkers in execution order.
 type RuleSet struct {
 	checks []CheckFunc
 }

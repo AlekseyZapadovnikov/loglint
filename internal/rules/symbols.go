@@ -6,6 +6,7 @@ import (
 	"github.com/AlekseyZapadovnikov/loglint/internal/logcall"
 )
 
+// CheckSymbols reports messages that contain noisy punctuation patterns or emoji.
 func CheckSymbols(record logcall.Record) []Violation {
 	if !record.HasMessage() {
 		return nil

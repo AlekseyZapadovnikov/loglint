@@ -25,10 +25,8 @@ func NewSensitiveChecker(cfg config.SensitiveConfig) *SensitiveChecker {
 	var keywords [][]string
 
 	if cfg.ReplaceDefaults {
-		// Use only extra keywords
 		keywords = buildKeywordsFromCanonical(cfg.ExtraKeywords)
 	} else {
-		// Merge defaults with extra keywords
 		allKeywords := make([]string, 0, len(config.DefaultSensitiveKeywords)+len(cfg.ExtraKeywords))
 		allKeywords = append(allKeywords, config.DefaultSensitiveKeywords...)
 		allKeywords = append(allKeywords, cfg.ExtraKeywords...)
@@ -46,7 +44,6 @@ func buildKeywordsFromCanonical(keywords []string) [][]string {
 	result := make([][]string, 0, len(keywords))
 	for _, kw := range keywords {
 		seq := strings.Split(kw, "_")
-		// Filter empty strings that might result from double underscores
 		filtered := make([]string, 0, len(seq))
 		for _, s := range seq {
 			if s != "" {
@@ -103,13 +100,23 @@ func (c *SensitiveChecker) Check(record logcall.Record) []Violation {
 }
 
 // hasSensitiveMessage checks if the message may contain sensitive data.
-// Message semantics (preserved from original implementation):
-//  1. Only checks messages with dynamic parts (concatenation, formatting)
-//  2. Only checks the static prefix of the message
-//  3. Looks for sensitive keyword at the END of the prefix (suffix matching)
+// Message semantics:
+//  1. Static fragments are checked for assignment-like patterns (":" or "=")
+//     near sensitive keywords (e.g. "password: value", "token=abc").
+//  2. Dynamic messages additionally preserve the original prefix-suffix semantics
+//     for patterns like "password " + value.
 func (c *SensitiveChecker) hasSensitiveMessage(record logcall.Record) bool {
-	// Only check messages with dynamic parts
-	if !record.HasMessage() || !record.Message.HasDynamicParts() {
+	if !record.HasMessage() {
+		return false
+	}
+
+	for _, fragment := range staticMessageFragments(record.Message) {
+		if c.hasSensitiveAssignmentPattern(fragment) {
+			return true
+		}
+	}
+
+	if !record.Message.HasDynamicParts() {
 		return false
 	}
 
@@ -118,14 +125,47 @@ func (c *SensitiveChecker) hasSensitiveMessage(record logcall.Record) bool {
 		return false
 	}
 
-	// Split prefix into words
 	words := splitWords(prefix)
 	if len(words) == 0 {
 		return false
 	}
 
-	// Check if sensitive keyword appears at the end of the prefix
 	return c.hasSensitiveSuffix(words)
+}
+
+func (c *SensitiveChecker) hasSensitiveAssignmentPattern(s string) bool {
+	if s == "" {
+		return false
+	}
+
+	lower := strings.ToLower(s)
+	words, ends := splitWordsWithEnds(lower)
+	if len(words) == 0 {
+		return false
+	}
+
+	for _, sequence := range c.keywords {
+		if len(sequence) == 0 || len(sequence) > len(words) {
+			continue
+		}
+
+		for i := 0; i <= len(words)-len(sequence); i++ {
+			if !matchesAt(words[i:], sequence) {
+				continue
+			}
+
+			end := ends[i+len(sequence)-1]
+			tail := strings.TrimLeftFunc(lower[end:], func(r rune) bool {
+				return unicode.IsSpace(r) || r == '"' || r == '\'' || r == '`'
+			})
+
+			if strings.HasPrefix(tail, ":") || strings.HasPrefix(tail, "=") {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 func (c *SensitiveChecker) containsSensitiveToken(s string) bool {
@@ -168,6 +208,38 @@ func splitWords(s string) []string {
 	return strings.FieldsFunc(s, func(r rune) bool {
 		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
 	})
+}
+
+func splitWordsWithEnds(s string) ([]string, []int) {
+	if s == "" {
+		return nil, nil
+	}
+
+	words := make([]string, 0, 8)
+	ends := make([]int, 0, 8)
+
+	start := -1
+	for i, r := range s {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			if start == -1 {
+				start = i
+			}
+			continue
+		}
+
+		if start != -1 {
+			words = append(words, s[start:i])
+			ends = append(ends, i)
+			start = -1
+		}
+	}
+
+	if start != -1 {
+		words = append(words, s[start:])
+		ends = append(ends, len(s))
+	}
+
+	return words, ends
 }
 
 // containsWordSequence checks if the sequence appears anywhere in words.

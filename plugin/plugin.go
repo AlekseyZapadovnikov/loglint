@@ -13,19 +13,8 @@ func init() {
 	register.Plugin(analyzer.Name, New)
 }
 
-// New creates a new linter plugin with the given settings.
-// Settings should be a map[string]any with the following structure:
-//
-//	settings:
-//	  enabled_rules:
-//	    - all
-//	  disabled_rules:
-//	    - symbols
-//	  sensitive:
-//	    extra_keywords:
-//	      - client_secret
-//	      - private_key
-//	    replace_defaults: false
+// New creates a golangci-lint module plugin instance from linter settings.
+// Settings are decoded with config.DecodePluginSettings.
 func New(settings any) (register.LinterPlugin, error) {
 	cfg, err := parseSettings(settings)
 	if err != nil {
@@ -35,12 +24,14 @@ func New(settings any) (register.LinterPlugin, error) {
 	return &Plugin{cfg: cfg}, nil
 }
 
+// Plugin is the golangci-lint module plugin implementation.
 type Plugin struct {
 	cfg config.Config
 }
 
 var _ register.LinterPlugin = (*Plugin)(nil)
 
+// BuildAnalyzers builds analyzers for the configured plugin instance.
 func (p *Plugin) BuildAnalyzers() ([]*analysis.Analyzer, error) {
 	a, err := analyzer.New(p.cfg)
 	if err != nil {
@@ -49,6 +40,7 @@ func (p *Plugin) BuildAnalyzers() ([]*analysis.Analyzer, error) {
 	return []*analysis.Analyzer{a}, nil
 }
 
+// GetLoadMode returns the required load mode for this plugin.
 func (p *Plugin) GetLoadMode() string {
 	return register.LoadModeTypesInfo
 }

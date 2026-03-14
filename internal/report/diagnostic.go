@@ -5,6 +5,7 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
+// Diagnostic converts a rule violation into analysis.Diagnostic.
 func Diagnostic(v rules.Violation) analysis.Diagnostic {
 	diagnostic := analysis.Diagnostic{
 		Category: string(v.Rule),

@@ -24,24 +24,17 @@
 
 ## Quick Start
 
-Использование поддерживается через `golangci-lint` + готовый бинарник `custom-gcl`, скачанный из релизов.
+Основной способ использования — готовый `custom-gcl` из релизов.
 
-1. Скачай `custom-gcl` из релиза и положи бинарник в корень проекта (или в любой каталог из `PATH`).
+1. Скачай `custom-gcl` из раздела Releases для своей платформы.
 
-2. Создай `.custom-gcl.yml`:
+2. Сделай бинарник исполняемым:
 
-```yaml
-version: v2.11.3
-name: custom-gcl
-destination: ./
-
-plugins:
-  - module: github.com/AlekseyZapadovnikov/loglint
-    import: github.com/AlekseyZapadovnikov/loglint/plugin
-    path: .
+```bash
+chmod +x ./custom-gcl
 ```
 
-3. Добавь настройку в `.golangci.yml`:
+3. Положи бинарник рядом с `.golangci.yml` и добавь настройку:
 
 ```yaml
 version: "2"
@@ -66,6 +59,14 @@ linters:
 
 ```bash
 ./custom-gcl run ./...
+```
+
+### Standalone (dev/debug)
+
+`loglint` публикуется как дополнительный standalone-бинарник для локальной отладки.
+
+```bash
+./loglint ./...
 ```
 
 ## Конфигурация
@@ -238,7 +239,8 @@ Keywords нормализуются:
 
 - анализируются только Go-пакеты, переданные на вход
 - для `sensitive` используется keyword matching, а не regex engine
-- для динамических сообщений sensitive-проверка смотрит на статический префикс
+- для `sensitive` статические сообщения проверяются по key-value паттернам (`:`/`=`),
+  а для динамических сообщений дополнительно анализируется статический префикс
 
 ## Пример диагностики
 

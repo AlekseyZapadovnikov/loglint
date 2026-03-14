@@ -6,6 +6,7 @@ import (
 	"github.com/AlekseyZapadovnikov/loglint/internal/logcall"
 )
 
+// CheckEnglish reports messages that contain non-Latin letters.
 func CheckEnglish(record logcall.Record) []Violation {
 	if !record.HasMessage() {
 		return nil

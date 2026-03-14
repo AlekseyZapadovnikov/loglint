@@ -27,8 +27,7 @@ type SensitiveConfig struct {
 	ReplaceDefaults bool `json:"replace_defaults" yaml:"replace_defaults"`
 }
 
-// DefaultSensitiveKeywords contains the default set of sensitive keywords.
-// Keywords are stored in canonical form (lowercase, words joined with underscore).
+// DefaultSensitiveKeywords stores built-in sensitive keywords in canonical form.
 var DefaultSensitiveKeywords = []string{
 	"password",
 	"passwd",
@@ -75,8 +74,7 @@ func (c Config) Normalize() Config {
 	return normalized
 }
 
-// Normalize returns a normalized copy of the configuration.
-// It validates and normalizes ExtraKeywords:
+// Normalize returns a normalized copy of SensitiveConfig:
 //   - converts to lowercase
 //   - splits by delimiters (underscore, hyphen, space)
 //   - removes empty strings and duplicates
@@ -86,7 +84,6 @@ func (c SensitiveConfig) Normalize() SensitiveConfig {
 	seen := make(map[string]struct{})
 
 	for _, kw := range c.ExtraKeywords {
-		// Normalize keyword to canonical form
 		canonical := NormalizeKeyword(kw)
 		if canonical == "" {
 			continue
@@ -99,7 +96,6 @@ func (c SensitiveConfig) Normalize() SensitiveConfig {
 		normalized = append(normalized, canonical)
 	}
 
-	// Sort for stable ordering
 	sort.Strings(normalized)
 
 	return SensitiveConfig{
@@ -108,10 +104,8 @@ func (c SensitiveConfig) Normalize() SensitiveConfig {
 	}
 }
 
-// Validate returns an error if the configuration is invalid.
+// Validate validates SensitiveConfig invariants.
 func (c SensitiveConfig) Validate() error {
-	// ExtraKeywords are normalized, so no validation needed for format
-	// Just check for obviously invalid patterns if needed in the future
 	return nil
 }
 
@@ -218,11 +212,9 @@ func SplitKeywordToWords(keyword string) []string {
 		return nil
 	}
 
-	// Replace common delimiters with spaces for uniform splitting
 	s = strings.ReplaceAll(s, "_", " ")
 	s = strings.ReplaceAll(s, "-", " ")
 
-	// Split by whitespace and filter empty
 	parts := strings.Fields(s)
 	if len(parts) == 0 {
 		return nil

@@ -31,6 +31,12 @@ func TestSensitiveChecker_DefaultBehavior(t *testing.T) {
 			wantViolation: false,
 		},
 		{
+			name:          "static message with sensitive assignment is rejected",
+			record:        recordWithStaticMessage("password: secret"),
+			wantViolation: true,
+			wantMessage:   sensitiveMessageViolation,
+		},
+		{
 			name:          "structured sensitive field is rejected",
 			record:        recordWithField("token"),
 			wantViolation: true,
@@ -97,9 +103,14 @@ func TestSensitiveChecker_MessageSemantics(t *testing.T) {
 			wantViolation: false,
 		},
 		{
-			name:          "static message is not checked by message matcher",
+			name:          "static message with colon and sensitive token triggers",
 			record:        recordWithStaticMessage("password: value"),
-			wantViolation: false,
+			wantViolation: true,
+		},
+		{
+			name:          "static message with equals and sensitive token triggers",
+			record:        recordWithStaticMessage("token=value"),
+			wantViolation: true,
 		},
 		{
 			name:          "multi word keyword at suffix triggers",

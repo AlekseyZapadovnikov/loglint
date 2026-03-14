@@ -46,8 +46,18 @@ jobs:
       - name: Run tests
         run: go test -race ./...
 
-      - name: Build CLI
+      - name: Build standalone CLI
         run: go build ./cmd/loglint
+
+      - name: Install golangci-lint builder
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/v2.11.3/install.sh | sh -s -- -b "$(pwd)/bin" v2.11.3
+          ./bin/golangci-lint --version
+
+      - name: Build custom-gcl
+        run: |
+          ./bin/golangci-lint custom --config .custom-gcl.yaml
+          test -f ./custom-gcl || test -f ./custom-gcl.exe
 
   create_release:
     name: Create GitHub release
@@ -112,36 +122,60 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Build release binary
+      - name: Install golangci-lint builder
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/v2.11.3/install.sh | sh -s -- -b "$(pwd)/bin" v2.11.3
+          ./bin/golangci-lint --version
+
+      - name: Build release binaries
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
         run: |
           mkdir -p dist
+          ./bin/golangci-lint custom --config .custom-gcl.yaml
+          custom_bin="./custom-gcl"
+          if [ -f "./custom-gcl.exe" ]; then
+            custom_bin="./custom-gcl.exe"
+          fi
+          if [ ! -f "$custom_bin" ]; then
+            echo "custom-gcl binary was not produced"
+            exit 1
+          fi
+          cp "$custom_bin" "dist/custom-gcl${{ matrix.ext }}"
+
           go build -trimpath -ldflags="-s -w" -o "dist/loglint${{ matrix.ext }}" ./cmd/loglint
 
       - name: Package archive
         id: package
         run: |
-          archive="loglint_${TAG}_${{ matrix.goos }}_${{ matrix.goarch }}.${{ matrix.archive }}"
-          mkdir -p package
-          cp "dist/loglint${{ matrix.ext }}" "package/loglint${{ matrix.ext }}"
+          archive_custom="custom-gcl_${TAG}_${{ matrix.goos }}_${{ matrix.goarch }}.${{ matrix.archive }}"
+          archive_loglint="loglint_${TAG}_${{ matrix.goos }}_${{ matrix.goarch }}.${{ matrix.archive }}"
+          mkdir -p package/custom-gcl package/loglint
+          cp "dist/custom-gcl${{ matrix.ext }}" "package/custom-gcl/custom-gcl${{ matrix.ext }}"
+          cp "dist/loglint${{ matrix.ext }}" "package/loglint/loglint${{ matrix.ext }}"
 
           if [ "${{ matrix.archive }}" = "zip" ]; then
-            (cd package && zip -r "../dist/${archive}" .)
+            (cd package/custom-gcl && zip -r "../../dist/${archive_custom}" .)
+            (cd package/loglint && zip -r "../../dist/${archive_loglint}" .)
           else
-            tar -C package -czf "dist/${archive}" .
+            tar -C package/custom-gcl -czf "dist/${archive_custom}" .
+            tar -C package/loglint -czf "dist/${archive_loglint}" .
           fi
 
-          sha256sum "dist/${archive}" > "dist/${archive}.sha256"
-          echo "archive=${archive}" >> "$GITHUB_OUTPUT"
+          sha256sum "dist/${archive_custom}" > "dist/${archive_custom}.sha256"
+          sha256sum "dist/${archive_loglint}" > "dist/${archive_loglint}.sha256"
+          echo "archive_custom=${archive_custom}" >> "$GITHUB_OUTPUT"
+          echo "archive_loglint=${archive_loglint}" >> "$GITHUB_OUTPUT"
 
       - name: Upload assets to GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload "$TAG" \
-            "dist/${{ steps.package.outputs.archive }}" \
-            "dist/${{ steps.package.outputs.archive }}.sha256" \
+            "dist/${{ steps.package.outputs.archive_custom }}" \
+            "dist/${{ steps.package.outputs.archive_custom }}.sha256" \
+            "dist/${{ steps.package.outputs.archive_loglint }}" \
+            "dist/${{ steps.package.outputs.archive_loglint }}.sha256" \
             --clobber

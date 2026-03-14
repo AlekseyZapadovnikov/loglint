@@ -6,6 +6,7 @@ import (
 	"github.com/AlekseyZapadovnikov/loglint/internal/logcall"
 )
 
+// CheckLowercase reports messages that start with an uppercase letter.
 func CheckLowercase(record logcall.Record) []Violation {
 	if !record.HasMessage() {
 		return nil
