@@ -1,6 +1,5 @@
 CUSTOM_GCL ?= ./custom-gcl
 GOLANGCI ?= golangci-lint
-CUSTOM_GCL_CONFIG ?= .custom-gcl.yaml
 
 .PHONY: pre-push fmt-check vet test build lint ensure-custom-gcl
 
@@ -32,7 +31,7 @@ ensure-custom-gcl:
 		echo "Using custom-gcl from PATH"; \
 	elif command -v "$(GOLANGCI)" >/dev/null 2>&1; then \
 		echo "Building $(CUSTOM_GCL) via $(GOLANGCI) custom"; \
-		"$(GOLANGCI)" custom --config "$(CUSTOM_GCL_CONFIG)"; \
+		"$(GOLANGCI)" custom; \
 		if [ ! -x "$(CUSTOM_GCL)" ]; then \
 			echo "Failed to build $(CUSTOM_GCL)"; \
 			exit 1; \
@@ -40,7 +39,7 @@ ensure-custom-gcl:
 	else \
 		echo "Missing custom-gcl and $(GOLANGCI)."; \
 		echo "Download custom-gcl from Releases or install golangci-lint and run:"; \
-		echo "  $(GOLANGCI) custom --config $(CUSTOM_GCL_CONFIG)"; \
+		echo "  $(GOLANGCI) custom"; \
 		exit 1; \
 	fi
 

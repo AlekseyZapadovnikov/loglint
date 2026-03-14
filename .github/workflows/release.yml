@@ -56,7 +56,7 @@ jobs:
 
       - name: Build custom-gcl
         run: |
-          ./bin/golangci-lint custom --config .custom-gcl.yaml
+          ./bin/golangci-lint custom
           test -f ./custom-gcl || test -f ./custom-gcl.exe
 
   create_release:
@@ -134,7 +134,7 @@ jobs:
           CGO_ENABLED: 0
         run: |
           mkdir -p dist
-          ./bin/golangci-lint custom --config .custom-gcl.yaml
+          ./bin/golangci-lint custom
           custom_bin="./custom-gcl"
           if [ -f "./custom-gcl.exe" ]; then
             custom_bin="./custom-gcl.exe"

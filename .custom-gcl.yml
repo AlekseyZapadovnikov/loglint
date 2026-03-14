@@ -1,0 +1,8 @@
+version: v2.11.3
+name: custom-gcl
+destination: ./
+
+plugins:
+  - module: github.com/AlekseyZapadovnikov/loglint
+    import: github.com/AlekseyZapadovnikov/loglint/plugin
+    path: .
