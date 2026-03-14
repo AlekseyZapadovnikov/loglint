@@ -1,0 +1,19 @@
+# Build artifacts
+/dist/
+/loglint
+/custom-gcl
+
+# Test and coverage outputs
+/coverage.out
+*.coverprofile
+*.test
+
+# IDE files
+/.idea/
+/.vscode/
+
+# OS and editor junk
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
